@@ -81,18 +81,31 @@ function start_Callback(hObject, eventdata, handles)
 clc
 delete(instrfindall);
 global s;
-global x1;
-global x2;
 global xlength;
-x1=0;
-x2=0;
+global byteCallBackCount;
+global spo2Bak;
+global spo2Plot;
+global breathBak;
+global breathPlot;
+global spo2Index;
+global breathIndex;
 xlength=1e3;
-hold(handles.axes1,'on');
-axis(handles.axes1,[0 xlength 0 256]);
-hold(handles.axes2,'on');
-axis(handles.axes2,[0 xlength 0 256]);
-com = 'COM6';
-% �жϴ��ں�
+ylength1 = 3e2;
+ylength2 = 3e2;
+spo2Plot = zeros(2,xlength);
+spo2Index = 1;
+breathPlot = zeros(1,xlength);
+breathIndex = 1;
+spo2Bak = [];
+breathBak = [];
+byteCallBackCount=100;
+
+axis(handles.axes1,[0 xlength 0 ylength1]);
+axis(handles.axes2,[0 xlength 0 ylength2]);
+com = 'COM1';
+
+% 选择串口，在windows下可用，根据自己需要选择去掉注释
+%{
 if get(handles.comlist,'value')~=0
     switch get(handles.comlist,'Value')
         case 1
@@ -121,15 +134,75 @@ if get(handles.comlist,'value')~=0
             com='COM12';
     end 
 end
+ 
 
 s=serial(com,'Parity','none','BaudRate',115200,'DataBits',8,'StopBits',1,'inputbuffersize',10240000);
 
 s.BytesAvailableFcnMode='byte';  
-s.BytesAvailableFcnCount=30;
+s.BytesAvailableFcnCount=100;
 fopen(s);
 s.BytesAvailableFcn={@ReceiveCallback,handles};
 set(handles.start,'Enable','off'); 
 set(handles.stop,'Enable','on');
+%}
+
+
+bcnt = 1;
+raw = [];
+x1 = 0:0.1:2*pi;
+x2 = 0:0.1:2*pi;
+[~,xl]=size(x1);
+xin1 = 1;
+xin2 = 1;
+% 测试用
+while true
+   
+   type = rand*3;
+   if type < 1
+       raw(bcnt) = 255;
+       raw(bcnt+1) = 255;
+       raw(bcnt+2) = uint8(0);
+       raw(bcnt+3) = uint8(sin(x1(xin1))*256);
+       raw(bcnt+4) = uint8(random('norm',0,127));
+       raw(bcnt+5) = uint8(random('norm',0,127));
+       raw(bcnt+6) = 165;
+       raw(bcnt+7) = 165;
+       bcnt = bcnt + 8;
+       xin1 = xin1 + 1;
+       if xin1 > xl
+           xin1 = 1;
+       end
+   
+   elseif type < 2
+       raw(bcnt) = 255;
+       raw(bcnt+1) = 254;
+       raw(bcnt+2) = int8(0);
+       raw(bcnt+3) = uint8(sin(x2(xin2))*256);
+       raw(bcnt+4) = 165;
+       raw(bcnt+5) = 165;
+       bcnt = bcnt + 6;
+       xin2 = xin2 + 1;
+       if xin2 > xl
+           xin2 = 1;
+       end
+       
+   else
+       raw(bcnt) = 255;
+       raw(bcnt+1) = 253;
+       raw(bcnt+2) = int8(random('norm',0,63));
+       raw(bcnt+3) = uint8(random('norm',0,255));
+       raw(bcnt+4) = 165;
+       raw(bcnt+5) = 165;
+       bcnt = bcnt + 6; 
+   end
+   
+   if bcnt > 200
+       ReceiveCallback(raw,handles);
+       bcnt=1;
+       raw=[];
+   end
+   
+end
 
 % --- Executes on button press in stop.
 function stop_Callback(hObject, eventdata, handles)
