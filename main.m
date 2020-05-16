@@ -89,12 +89,14 @@ global breathBak;
 global breathPlot;
 global spo2Index;
 global breathIndex;
-xlength=1e3;
+global dataBak;
+xlength=2e2;
 ylength1 = 3e2;
 ylength2 = 3e2;
 spo2Plot = zeros(2,xlength);
 spo2Index = 1;
 breathPlot = zeros(1,xlength);
+dataBak = [];
 breathIndex = 1;
 spo2Bak = [];
 breathBak = [];
@@ -104,8 +106,8 @@ axis(handles.axes1,[0 xlength 0 ylength1]);
 axis(handles.axes2,[0 xlength 0 ylength2]);
 com = 'COM1';
 
-% 选择串口，在windows下可用，根据自己需要选择去掉注释
-%{
+% 选择串口，在windows下可用，根据自己�?要�?�择去掉注释
+
 if get(handles.comlist,'value')~=0
     switch get(handles.comlist,'Value')
         case 1
@@ -139,14 +141,14 @@ end
 s=serial(com,'Parity','none','BaudRate',115200,'DataBits',8,'StopBits',1,'inputbuffersize',10240000);
 
 s.BytesAvailableFcnMode='byte';  
-s.BytesAvailableFcnCount=100;
+s.BytesAvailableFcnCount=byteCallBackCount;
 fopen(s);
 s.BytesAvailableFcn={@ReceiveCallback,handles};
 set(handles.start,'Enable','off'); 
 set(handles.stop,'Enable','on');
-%}
 
 
+%{
 bcnt = 1;
 raw = [];
 x1 = 0:0.1:2*pi;
@@ -154,7 +156,7 @@ x2 = 0:0.1:2*pi;
 [~,xl]=size(x1);
 xin1 = 1;
 xin2 = 1;
-% 测试用
+% 测试�?
 while true
    
    type = rand*3;
@@ -203,6 +205,7 @@ while true
    end
    
 end
+%}
 
 % --- Executes on button press in stop.
 function stop_Callback(hObject, eventdata, handles)
