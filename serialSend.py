@@ -33,14 +33,23 @@ def send(send_data):
         print("发送失败")
 
 # 打开文件
-fileName = 'test1.txt'
+fileName = 'text9.txt'
 f = open(fileName,'r')
 lines = f.readlines()
+former = ''
 port_open()
 while True:
     for line in lines:
         for word in line.split(" "):
-            print('发送数据：' + word)
-            send(word)
-            time.sleep(0.001)
+            if len(word)==2:
+                print('发送数据：' + word)
+                send(word)
+                time.sleep(0.001)
+            elif former == '':
+                former = word
+            else:
+                word = former+word
+                print('发送数据：' + word)
+                send(word)
+                time.sleep(0.001)
             

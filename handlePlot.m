@@ -1,13 +1,11 @@
 function handlePlot(axs,data,index)
 global xlength;
-%handlePlot 鍦℅UI鐣岄潰缁樺埗鍥惧儚
-%   axes涓烘缁樺埗娉㈠舰鐨勫潗鏍囧彞鏌?
-%   data-瑕佺粯鍒剁殑娉㈠舰鏁版嵁锛宨ndex-褰撳墠鏇存柊鍧愭爣
-%   type-涓?1琛ㄧず涓篠PO2娉㈠舰缁樺埗锛屼负2琛ㄧず涓哄懠鍚告尝褰㈢粯鍒?
+%handlePlot 波形显示
+%   axes-控件句柄
+%   data-波形数据
+%   type
 
-% 鍒ゆ柇缁樺埗娉㈠舰鐨勭被鍨?
-
-plot(axs,(1:xlength),data(1,1:xlength),'g');
-set(axs,'Color',[0 0 0])
+plot(axs,(1:index),data(1,1:index),'g');%画出波形
+set(axs,'Color',[0 0 0])                    %设置显示控件
 end
 

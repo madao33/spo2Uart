@@ -22,7 +22,7 @@ function varargout = main(varargin)
 
 % Edit the above text to modify the response to help main
 
-% Last Modified by GUIDE v2.5 23-Apr-2020 22:16:29
+% Last Modified by GUIDE v2.5 24-May-2020 10:16:30
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -51,6 +51,11 @@ function main_OpeningFcn(hObject, eventdata, handles, varargin)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to main (see VARARGIN)
+% h = handles.h0bject; %获取句柄
+newIcon = javax.swing.ImageIcon('logo.jpg'); %读取图片文件
+figFrame = get(gcf,'JavaFrame');
+figFrame.setFigureIcon(newIcon);
+set(gcf,'name','口罩式睡眠呼吸监测仪器'); %第三个参数为要修改的界面名称
 
 % Choose default command line output for main
 handles.output = hObject;
@@ -72,7 +77,7 @@ function varargout = main_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-
+%开始按键
 % --- Executes on button press in start.
 function start_Callback(hObject, eventdata, handles)
 % hObject    handle to start (see GCBO)
@@ -80,9 +85,10 @@ function start_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 clc
 delete(instrfindall);
-global s;
-global xlength;
-global byteCallBackCount;
+global s;                   %串口对象
+global xlength;             %横坐标
+global xlength2;
+global byteCallBackCount;   %中断触发字节数
 global spo2Bak;
 global spo2Plot;
 global breathBak;
@@ -90,24 +96,35 @@ global breathPlot;
 global spo2Index;
 global breathIndex;
 global dataBak;
-xlength=2e2;
-ylength1 = 3e2;
+global voltvalue;
+voltvalue=50;
+
+xlength=5e2;                    %x轴显示范围
+xlength2=2e2;
+ylength1 = 3e2;                 %y轴显示范围（1、2、3三个图）
 ylength2 = 3e2;
-spo2Plot = zeros(2,xlength);
+spo2Plot = zeros(2,xlength);    %二维血氧数组
 spo2Index = 1;
-breathPlot = zeros(1,xlength);
+breathPlot = zeros(1,xlength);  %呼吸数据
 dataBak = [];
 breathIndex = 1;
 spo2Bak = [];
 breathBak = [];
-byteCallBackCount=100;
+byteCallBackCount=50;
 
-axis(handles.axes1,[0 xlength 0 ylength1]);
-axis(handles.axes2,[0 xlength 0 ylength2]);
+axis(handles.axes1,[0 xlength 0 ylength1]);%各个图表具体参数设置
+set(handles.axes1,'Ycolor','k');            %X、Y颜色
+set(handles.axes1,'Xcolor','k');
+axis(handles.axes2,[0 xlength 0 ylength1]);
+handles.axes2.XAxis.Visible = 'off';
+handles.axes2.YAxis.Visible = 'off';
+axis(handles.axes3,[0 xlength 200 ylength2]);
+handles.axes3.XAxis.Visible = 'off';
+handles.axes3.YAxis.Visible = 'off';
 com = 'COM1';
 
-% 閫夋嫨涓插彛锛屽湪windows涓嬪彲鐢紝鏍规嵁鑷繁闇?瑕侀?夋嫨鍘绘帀娉ㄩ噴
 
+%端口选择
 if get(handles.comlist,'value')~=0
     switch get(handles.comlist,'Value')
         case 1
@@ -137,89 +154,31 @@ if get(handles.comlist,'value')~=0
     end 
 end
  
-
+%串口详细参数设置（奇偶校验、波特率、数据位、停止位、接受缓存区大小）
 s=serial(com,'Parity','none','BaudRate',115200,'DataBits',8,'StopBits',1,'inputbuffersize',10240000);
 
-s.BytesAvailableFcnMode='byte';  
-s.BytesAvailableFcnCount=byteCallBackCount;
-fopen(s);
-s.BytesAvailableFcn={@ReceiveCallback,handles};
-set(handles.start,'Enable','off'); 
+s.BytesAvailableFcnMode='byte';             %字节
+s.BytesAvailableFcnCount=byteCallBackCount; %100个字节触发中断
+fopen(s);                                   %打开串口
+s.BytesAvailableFcn={@ReceiveCallback,handles};%中断触发回调函数
+set(handles.start,'Enable','off');          %设置按键不可按下
 set(handles.stop,'Enable','on');
 
-
-%{
-bcnt = 1;
-raw = [];
-x1 = 0:0.1:2*pi;
-x2 = 0:0.1:2*pi;
-[~,xl]=size(x1);
-xin1 = 1;
-xin2 = 1;
-% 娴嬭瘯鐢?
-while true
-   
-   type = rand*3;
-   if type < 1
-       raw(bcnt) = 255;
-       raw(bcnt+1) = 255;
-       raw(bcnt+2) = uint8(0);
-       raw(bcnt+3) = uint8(sin(x1(xin1))*256);
-       raw(bcnt+4) = uint8(random('norm',0,127));
-       raw(bcnt+5) = uint8(random('norm',0,127));
-       raw(bcnt+6) = 165;
-       raw(bcnt+7) = 165;
-       bcnt = bcnt + 8;
-       xin1 = xin1 + 1;
-       if xin1 > xl
-           xin1 = 1;
-       end
-   
-   elseif type < 2
-       raw(bcnt) = 255;
-       raw(bcnt+1) = 254;
-       raw(bcnt+2) = int8(0);
-       raw(bcnt+3) = uint8(sin(x2(xin2))*256);
-       raw(bcnt+4) = 165;
-       raw(bcnt+5) = 165;
-       bcnt = bcnt + 6;
-       xin2 = xin2 + 1;
-       if xin2 > xl
-           xin2 = 1;
-       end
-       
-   else
-       raw(bcnt) = 255;
-       raw(bcnt+1) = 253;
-       raw(bcnt+2) = int8(random('norm',0,63));
-       raw(bcnt+3) = uint8(random('norm',0,255));
-       raw(bcnt+4) = 165;
-       raw(bcnt+5) = 165;
-       bcnt = bcnt + 6; 
-   end
-   
-   if bcnt > 200
-       ReceiveCallback(raw,handles);
-       bcnt=1;
-       raw=[];
-   end
-   
-end
-%}
-
+%停止按键
 % --- Executes on button press in stop.
 function stop_Callback(hObject, eventdata, handles)
 % hObject    handle to stop (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global s;
-fclose(s);
-delete(s);
-delete(instrfindall);
+global s;                   %串口对象
+fclose(s);                  %关闭串口
+delete(s);                  %删除
+delete(instrfindall);       %清除所有串口
 clear s;
-cla(handles.axes1);
+cla(handles.axes1);         %清除所有图表
 cla(handles.axes2);
-set(handles.start,'Enable','on');
+cla(handles.axes3);
+set(handles.start,'Enable','on');%改变按键状态
 set(handles.stop,'Enable','off');
 
 % --- Executes on selection change in comlist.
@@ -246,7 +205,35 @@ end
 
 
 % --- Executes on mouse press over axes background.
-function axes2_ButtonDownFcn(hObject, eventdata, handles)
-% hObject    handle to axes2 (see GCBO)
+function axes3_ButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to axes3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --- If Enable == 'on', executes on mouse press in 5 pixel border.
+% --- Otherwise, executes on mouse press in 5 pixel border or over pulse_btn.
+
+
+% --- Executes on button press in pulse_btn.
+function pulse_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to pulse_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global s;
+% fopen(s);
+disp('发送:');
+disp('1');
+fprintf(s,1);
+
+
+% --- Executes on button press in breath_btn.
+function breath_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to breath_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global s;
+% fopen(s);
+disp('发送:');
+disp('2');
+fprintf(s,hex2dec('2'));

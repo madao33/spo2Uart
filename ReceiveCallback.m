@@ -1,68 +1,121 @@
 % function ReceiveCallback(raw,handles)
 function ReceiveCallback(obj, event,handles)
-global s;
-global byteCallBackCount;
-global xlength;
-global spo2Bak;
-global spo2Plot;
-global breathBak;
-global breathPlot;
-global spo2Index;
-global breathIndex;
-global dataBak;
-% 璇诲彇涓插彛涓帴鍙楀埌鐨勬枃鏈紝娉ㄦ剰褰撳墠璇诲彇鍒扮殑鏍煎紡涓哄崄杩涘埗
-raw = fread(s,byteCallBackCount);
-raw = [dataBak;raw];
-disp(raw);
-[rlength,~] = size(raw);
+global s;                       %串口对象
+global byteCallBackCount;       %中断触发字节数
+global xlength;                 %X轴坐标
+global xlength2;
+global spo2Bak;                 %？？？？没用                
+global spo2Plot;                %血氧显示控件
+global breathBak;               %？？？？没用
+global breathPlot;              %呼吸显示控件
+global spo2Index;               %血氧数据横坐标
+global breathIndex;             %呼吸数据横坐标
+global dataBak;                 %一次判断未能识别的数据
+
+% global breathIndexf;
+% global breathPlotf;
+global voltvalue;
+
+raw = fread(s,byteCallBackCount);%从串口连续读取100个字节
+raw = [dataBak;raw];             %合并上一段数据和下一段数据
+% disp(raw);
+[rlength,~] = size(raw);         %计算一段数组大小
 % disp('length:');
 % disp(rlength);
 i=1;
 
-while i <= rlength-7 
-    
-    %棣栧厛琛?姘ф暟鎹?
+while i <= rlength-5             %保证判断时，数组下标在合法范围内
+    %识别血氧数据帧头、帧尾
     if i <= rlength-7 && raw(i) == 255 && raw(i+1) == 255 && raw(i+6) == 165 && raw(i+7) == 165
-        
-        % 琛?姘ф尝褰㈢粯鍒跺埌鐢诲竷鏈熬
+        %判断血氧数组是否已满
         if spo2Index > xlength
-            % 璁℃暟鎸囬拡褰掍竴
+            % 血氧数组已满，从新进行覆盖
             spo2Index = 1;
+            [spo2,hr]=calcSpo2(spo2Plot);
+            set(handles.spo2Text,'String',int2str(spo2)+"%");
+            set(handles.hrText,'String',int2str(hr)+"/min");
         end
-        % 鎻愬彇绾㈠厜鏁版嵁
-        spo2Plot(2,spo2Index) = raw(i+2)*256+raw(i+3);
-        % 鎻愬彇绾㈠鍏夋暟鎹?
-        spo2Plot(1,spo2Index) = raw(i+4)*256+raw(i+5);
-        spo2Index = spo2Index + 1; % 鎸囬拡鍔犱竴
-        disp(spo2Plot(1,spo2Index-1));
-        i = i+8;
-    % 鍒ゆ柇涓哄懠鍚告暟鎹?
-    elseif raw(i) == 255 && raw(i+1) == 254 && raw(i+4) == 165 && raw(i+5)==165
-        % 鍛煎惛娉㈠舰缁樺埗鍒扮敾甯冩湯灏?
-        if breathIndex > xlength
-            breathIndex = 1;
-        end
-        % 鎻愬彇鍛煎惛鏁版嵁
-        breathPlot(1,breathIndex) = raw(i+2)*256+raw(i+3);
-        breathIndex = breathIndex + 1;
-        i = i + 6;
-    
-    % 鍒ゆ柇涓虹數鍘嬫寜閿俊鎭?
-    elseif raw(i) == 255 && raw(i+1) == 253 && raw(i+4) == 165 && raw(i+5)==165
-        volt = mod(raw(i+2),16) * 256 + raw(i+3);
-        btn1 = bitand(raw(i+2),32,'int8');
-        btn2 = bitand(raw(i+2),16,'int8');
         
-        set(handles.voltTex,'String',int2str(volt));
-        i = i + 6;
+        % 读取识别成功后，中间所含有的数据（红光）
+        spo2Plot(1,spo2Index) =raw(i+2)*256+raw(i+3);
+        % 红外光
+        spo2Plot(2,spo2Index) = raw(i+4)*256+raw(i+5);
+        % hanning滤波
+        if spo2Index>2
+            spo2Plot(1,spo2Index)=(spo2Plot(1,spo2Index-2)+2*spo2Plot(1,spo2Index-1)+spo2Plot(1,spo2Index))/4;  
+            spo2Plot(2,spo2Index)=(spo2Plot(2,spo2Index-2)+2*spo2Plot(2,spo2Index-1)+spo2Plot(2,spo2Index))/4;  
+        end
+        spo2Index = spo2Index + 1; % 数组坐标指针加一
+%         disp(spo2Plot(1,spo2Index-1));
+        i = i+8;                   %识别成功后，跳过这8个数据继续进行判断
+    %未能识别成功，判断是否为呼吸数据
+    elseif raw(i) == 255 && raw(i+1) == 254 && raw(i+4) == 165 && raw(i+5)==165
+        % 判断数组是否已经溢出
+        if breathIndex > xlength2
+            breathIndex = 1;
+            breath=calcbreath(breathPlot(3:200));
+            set(handles.breathTex,'String',int2str(breath)+"/min");
+        end
+        
+        % 识别成功，提取呼吸数据
+        breathPlot(1,breathIndex) = bitand(raw(i+2),15,'int8')*256+raw(i+3);
+        % hanning滤波
+        if breathIndex > 2
+            breathPlot(1,breathIndex) = (breathPlot(1,breathIndex-2) + 2 * breathPlot(1,breathIndex-1) + breathPlot(1,breathIndex))/4;
+%             breathf=[breathPlot(1,breathIndex-2) breathPlot(1,breathIndex-1) breathPlot(1,breathIndex)];
+%             breathPlot(1,breathIndex)=order(breathf);
+        end
+        breathIndex = breathIndex + 1;
+        i = i + 6;          %跳过呼吸数据，进行下一段数据识别
+    
+    % 未能识别成功，判断是否为电压，按键数据
+    elseif raw(i) == 255 && raw(i+1) == 253 && raw(i+4) == 165 && raw(i+5)==165
+        volt = mod(raw(i+2),15) * 256 + raw(i+3);
+        btn1 = bitand(raw(i+2),32,'int8');          %位与，提取按键1（呼吸）
+        btn2 = bitand(raw(i+2),16,'int8');          %位与，提取按键2（血氧）
+        disp('电压：');
+        disp(volt);                                 %显示电压
+        volt=(volt/2048)*1.5;%电量判断
+        if volt>=4.2
+            voltvalue=100;
+        else if volt>3.95
+                voltvalue=75;
+            else if volt>3.85
+                    voltvalue=50;
+                else if volt>3.73
+                        voltvalue=25;
+                    else if volt>3.5
+                            voltvalue=5;
+                        else
+                            voltvalue=1;
+                        end
+                    end
+                end
+            end
+        end
+        set(handles.voltTex,'String',"电量："+int2str(voltvalue)+"%");%设置电压显示控件
+        if btn1 == 32
+            set(handles.pulse_btn,'BackgroundColor','g');    %设置按键状态（改变颜色）
+        else
+            set(handles.pulse_btn,'BackgroundColor','r');    
+        end
+        
+        if btn2 == 16
+            set(handles.breath_btn,'BackgroundColor','g');
+        else
+            set(handles.breath_btn,'BackgroundColor','r');
+        end
+        
+        i = i + 6;                      %识别成功后，进行下一段数据识别
     else
-        i = i + 1;
+        i = i + 1;                      %均未能识别成功，从下一个数据继续识别
     end
 end % while-end
-dataBak = raw(i+1:rlength);
-% 缁樺埗娉㈠舰鍥?
-handlePlot(handles.axes1,spo2Plot,spo2Index);
-handlePlot(handles.axes2,breathPlot,breathIndex);
+dataBak = raw(i:rlength);               %回收这100数据的最后几个数据，防止数据中断
+
+handlePlot(handles.axes1,spo2Plot(1,:),xlength);
+handlePlot(handles.axes2,spo2Plot(2,:),xlength);
+handlePlot(handles.axes3,breathPlot,xlength2);
 
 end % function-end 
 
