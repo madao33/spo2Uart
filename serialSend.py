@@ -27,13 +27,16 @@ def port_close():
 def send(send_data):
     if (ser.isOpen()):
         # ser.write(send_data.encode('utf-8'))  #utf-8 编码发送
-        ser.write(binascii.a2b_hex(send_data))  #Hex发送
-        print("发送成功",send_data)
+        try:
+            ser.write(binascii.a2b_hex(send_data))  #Hex发送
+            # print("发送成功",send_data)
+        except:
+            print("发生失败",send_data)
     else:
         print("发送失败")
 
 # 打开文件
-fileName = 'text9.txt'
+fileName = 'text10.txt'
 f = open(fileName,'r')
 lines = f.readlines()
 former = ''
@@ -42,7 +45,7 @@ while True:
     for line in lines:
         for word in line.split(" "):
             if len(word)==2:
-                print('发送数据：' + word)
+                # print('发送数据：' + word)
                 send(word)
                 time.sleep(0.001)
             elif former == '':

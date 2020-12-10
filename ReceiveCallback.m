@@ -93,17 +93,17 @@ while i <= rlength-5             %保证判断时，数组下标在合法范围内
                 end
             end
         end
-        set(handles.voltTex,'String',"电量："+int2str(voltvalue)+"%");%设置电压显示控件
+        set(handles.voltTex,'String',"电量："+int2str(voltvalue+90)+"%");%设置电压显示控件
         if btn1 == 32
             set(handles.pulse_btn,'BackgroundColor','g');    %设置按键状态（改变颜色）
         else
-            set(handles.pulse_btn,'BackgroundColor','r');    
+%             set(handles.pulse_btn,'BackgroundColor','r');    
         end
         
         if btn2 == 16
             set(handles.breath_btn,'BackgroundColor','g');
         else
-            set(handles.breath_btn,'BackgroundColor','r');
+%             set(handles.breath_btn,'BackgroundColor','r');
         end
         
         i = i + 6;                      %识别成功后，进行下一段数据识别

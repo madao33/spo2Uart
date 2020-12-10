@@ -55,7 +55,7 @@ function main_OpeningFcn(hObject, eventdata, handles, varargin)
 newIcon = javax.swing.ImageIcon('logo.jpg'); %读取图片文件
 figFrame = get(gcf,'JavaFrame');
 figFrame.setFigureIcon(newIcon);
-set(gcf,'name','口罩式睡眠呼吸监测仪器'); %第三个参数为要修改的界面名称
+set(gcf,'name','血氧呼吸监测仪'); %第三个参数为要修改的界面名称
 
 % Choose default command line output for main
 handles.output = hObject;
